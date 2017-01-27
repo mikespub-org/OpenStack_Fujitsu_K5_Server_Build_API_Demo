@@ -6,5 +6,6 @@ This example requires a Fujitsu K5 or OpenStack Project to target.
 
 It creates everything necessary to have a public login to a server.
 
-It's fully documented on htps://allthingscloud.eu
+It's fully documented on https://allthingscloud.eu
+
 
