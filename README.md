@@ -8,3 +8,6 @@ It creates everything necessary to have a public login to a server.
 
 It's fully documented on https://allthingscloud.eu
 modifications in this repo: allow usage behind proxy. Some additional features / see sample files
+Use at your own risk.
+fjk5.py contains the functions needed by createNetwork, createKeyPair, createserver, listServers.
+you'll need valid credentials - merge them into your local copy of config.py
