@@ -33,7 +33,7 @@ def main():
     # before we start we need info about the network
     networks, status = fjk5.list_networks(token)
     if status < 400 : # we now have a list of dictionaries containing the network
-        network = filter(lambda name: name['name'] == config.networkName, networks.json()['networks'])
+        network = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['networkName'], networks.json()['networks'])
         # if this net doesn't exist, we create it
         if len(network) == 0:
             ourNetwork = fjk5.create_network(token)
@@ -42,23 +42,23 @@ def main():
         else:
             networkID = network[0]['id']
             subnet = network[0]['subnets']
-        # networkID = networks.json()['networks'][config.networkIndex].get('id')
         print ('network %s: ' % networkID)
         
     else :
         print ("error %s: " % response.status_code)
     # we need a router
     routers, status = fjk5.list_routers(token)
-    
-    router = filter(lambda name: name['name'] == config.routerName, routers.json()['routers'])
+    # if config.testing: pdb.set_trace()
+    router = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['routerName'], routers.json()['routers'])
     if len(router) == 0 :
         ourRouter = fjk5.create_router(token)
         routerID = ourRouter.json()['router']['id']
         # now this router needs some networks
-        extNetwork = filter(lambda name: name['name'] == config.externalNet, networks.json()['networks'])
+        extNetwork = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['externalNet'] , networks.json()['networks'])
         updatedRouter = fjk5.update_router_gateway(token, routerID, extNetwork[0]['id'])
         routerID = updatedRouter.json()['router']['id']
-        router_interface = fjk5.add_interface_to_router(token, ourRouter.json()['router']['id'], subnet.json()['subnet']['id'])
+        if config.testing: pdb.set_trace()
+        router_interface = fjk5.add_interface_to_router(token, ourRouter.json()['router']['id'], subnet)
         
     else:
         routerID = router[0]['id']

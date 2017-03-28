@@ -23,6 +23,7 @@ import requests
 import sys
 import json
 import pprint
+import base64
 
 if config.testing :
     import pdb
@@ -75,7 +76,7 @@ def get_scoped_token(adminUser = config.adminUser ,
 """
 creates a new network
 """
-def create_network(k5token, name = config.networkName , availability_zone = config.availabilityZone):
+def create_network(k5token, name = config.zoneInfo[config.availabilityZone]['networkName'] , availability_zone = config.availabilityZone):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/networks')
     print networkURL
     token = k5token.headers['X-Subject-Token']
@@ -106,7 +107,7 @@ def create_subnet(k5token,
                   allocationPoolStart = config.allocationPoolStart,
                   allocationPoolEnd = config.allocationPoolEnd,
                   defaultRoute = config.defaultRoute,
-                  availability_zone = config.availabilityZone, ns1 = config.nameserver1, ns2 = config.nameserver2):
+                  availability_zone = config.availabilityZone, ns1 = config.zoneInfo[config.availabilityZone]['nameserver1']  , ns2 = config.zoneInfo[config.availabilityZone]['nameserver2']):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/subnets')
     token = k5token.headers['X-Subject-Token']
     try:
@@ -135,7 +136,7 @@ def create_subnet(k5token,
 """
 Virtual router. 
 """
-def create_router(k5token, name = config.routerName, availability_zone = config.availabilityZone ):
+def create_router(k5token, name = config.zoneInfo[config.availabilityZone]['routerName'], availability_zone = config.availabilityZone ):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/routers')
     print networkURL
     token = k5token.headers['X-Subject-Token']
@@ -262,7 +263,9 @@ def create_port(k5token, network_id, security_group_id = config.securityGroupID 
     # security groups should contain default, else some things will fail during setup (like login credentials). YOu can remove it later if you wish.
     securityGroups = [security_group_id] if security_group_id else []
     defaultSecurityGroup = getSecurityGroup(k5token, 'default')
+    # default1aGroup = getSecurityGroup(k5token, 'secgroup-1a')
     securityGroups.append(defaultSecurityGroup['id'])
+    ### securityGroups.append( getSecurityGroup(k5token, 'secgroup-1a')['id'])
     try:
         response = requests.post(networkURL,
                                  headers={
@@ -311,33 +314,32 @@ This is transferred and stored in clear text, so please change it.
 """
 def create_server(k5token,
                 port,
-                name = config.serverName,
-                imageid = config.imageRef,
-                flavorid = config.flavor,
-                sshkey_name = config.key,
-                security_group_name = config.securityGroup,
-                availability_zone = config.availabilityZone,
-                volsize = config.volumesize  ):
+                serverInfo ):
     computeURL = getComputeURL(k5token) 
     token = k5token.headers['X-Subject-Token']
     # one could generate this more dynamically, i.e., when parameters are not given: not add them to the dictionary.
-    serverDefinition = { "server": {  "name": name,
-                                      "imageRef":  imageid,
-                                      "flavorRef": flavorid,
-                                      "key_name": sshkey_name,
+    serverDefinition = { "server": {  "name": serverInfo['name'],
+                                      "imageRef":  serverInfo['imageRef'],
+                                      "flavorRef": serverInfo['flavorid'],
+                                      "key_name": serverInfo['sshkey_name'],
                                       "networks": [{"port": port}],
-                                      "security_groups": [{ "name":   security_group_name} , {"name" : "default"} ],
-                                      "availability_zone" : availability_zone, 
+                                      "security_groups": [{ "name":   serverInfo['security_group_name']} ,
+                                                          {"name" : "default"},
+                                                          {"name" : "secgroup-1a"}],
+                                      "availability_zone" : serverInfo['availabilityZone'], 
                                       "block_device_mapping_v2": [{"device_name": "/dev/vda",
                                                                    "source_type": "image",
                                                                    "destination_type": "volume",
-                                                                   "volume_size": volsize,
+                                                                   "volume_size": serverInfo['volumesize'],
                                                                    "boot_index": "0",
-                                                                   "uuid": imageid, 
+                                                                   "uuid": serverInfo['imageRef'], 
                                                                    "delete_on_termination": "True"   },  ] } }
-    if config.initialPassword: # this is the workaround for windows login instead of the complicated way deriving the password from the key generated above. Stored in clear Text, change it!
-        serverDefinition['server']['metadata'] =  {"admin_pass": config.initialPassword}
+    if serverInfo['initialPassword']: # this is the workaround for windows login instead of the complicated way deriving the password from the key generated above. Stored in clear Text, change it!
+        serverDefinition['server']['metadata'] =  {"admin_pass": serverInfo['initialPassword']}
+    if serverInfo['initialScript']: # this will configure your server for your needs
+        serverDefinition['server']['user_data'] = base64.b64encode(serverInfo['initialScript'])
     try:
+        if config.testing: pdb.set_trace()
         response = requests.post(computeURL,
                                 headers={'X-Auth-Token':token,
                                          'Content-Type': 'application/json',
@@ -415,6 +417,9 @@ def getImagesUrl(token):
 def getServerPasswordURL(token, serverID):
     return unicode(get_endpoint(token, "compute")) + unicode('/servers/') + serverID + u'/os-server-password'
 
+def get_globalIPURL (k5token):
+    return unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/floatingips')
+
 """
 return a json list of all servers
 """
@@ -444,6 +449,26 @@ list all our known networks
 def list_networks(token):
     return list_something(token, get_networkURL(token))
 
+
+
+"""
+list all our own global IPs
+"""
+def list_globalIPs(token):
+    return list_something(token, get_globalIPURL(token))[0].json()['floatingips']
+
+"""
+list all our own unused IPs
+"""
+def list_unusedIPs(token):
+    addresses = list_globalIPs(token)
+    # if config.testing:pdb.set_trace()
+    unused = filter(lambda address: address['port_id'] == None, addresses)
+    return unused
+
+
+# activeImages = 
+
 """
 dynamic global IP for server
 """
@@ -451,7 +476,6 @@ def create_global_ip(k5token, ext_network_id, port_id, availability_zone = confi
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/floatingips')
     print (networkURL)
     token = k5token.headers['X-Subject-Token']
-
     try:
         response = requests.post(networkURL,
                                 headers={
@@ -470,8 +494,38 @@ def create_global_ip(k5token, ext_network_id, port_id, availability_zone = confi
     except:
         return ("\nUnexpected error:", sys.exc_info())
 
+
+
+def deleteGlobalIP(k5token, globalIpId):
+    networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/floatingips/ ') + globalIpId
+    token = k5token.headers['X-Subject-Token']
+    try:
+        response = requests.delete(networkURL,
+                                    headers={
+                                         'X-Auth-Token': token,
+                                         'Content-Type': 'application/json',
+                                         'Accept': 'application/json'},
+                                    proxies=config.htmlProxies)
+        print(response.content)
+        return response
+    except:
+        return ("\nUnexpected error:", sys.exc_info())
+        
+    
+    
+
 """
-display a list of available ACTIVE images
+delete unused global IPs
+"""
+def deleteUnusedGlobalIPs(k5token):
+    for address in list_unusedIPs(k5token) :
+        deleteGlobalIP(k5token, address['id'])
+        print ('deleted IP %s ' % (address['floating_ip_address']) )
+
+        
+
+"""
+display a list of available ACTIVE images. Secondly, a demo on how to filter/search this list.
 """
 def list_images(token, filterName = False) :
     url = getImagesUrl(token)
@@ -498,9 +552,13 @@ def main():
     activeImages = list_images(token)
     for image in activeImages:
         print('Image "%s" : ID: "%s" : MinDisk %s' %(image['name'], image['id'], image['minDisk']))
-    if config.testing: pdb.set_trace()
     image = list_images(token, u'Windows Server 2012 R2 SE 64bit + SQL Server 2014 SE SP2 (English) 01')[0]
     print('WindowsImage "%s" : ID: "%s" : MinDisk %s' %(image['name'], image['id'], image['minDisk']))
+
+    # get global IP info
+    if config.testing: pdb.set_trace()
+    
+    
         
         
 

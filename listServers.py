@@ -26,10 +26,12 @@ To search for a server, you would impose  a lambda on the servers[] array below.
 """
 def listServers():
     token = fjk5.get_scoped_token()
+    # pdb.set_trace()
     servers = fjk5.list_servers(token)
     for server in  servers['servers']:
         print ('name: %s id %s' % (server['name'], server['id']))
         serverDetail = fjk5.getServerDetail(token, server['id'])
+        pprint.pprint(serverDetail)
         for addresses in serverDetail['server']['addresses'].keys():
             for address in serverDetail['server']['addresses'][addresses] :
                 print ('port %s,  IP %s'  % (addresses, address['addr']))

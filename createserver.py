@@ -23,7 +23,7 @@ import fjk5
 if config.testing :
     import pdb
 import listServers
-
+import pprint
 
 def main():
     print (usage)
@@ -35,7 +35,7 @@ def main():
     securityGroup = fjk5.getSecurityGroup(token, config.securityGroup )
     
     if status < 400 :
-        network = filter(lambda name: name['name'] == config.networkName, networks.json()['networks'])
+        network = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['networkName'], networks.json()['networks'])
         networkID = network[0]['id']
         print ('network %s: ' % networkID)
         # create a port
@@ -44,25 +44,23 @@ def main():
         port = portInfo.json()['port'].get('id')
         # this one creates the server
         
-        serverInfo = fjk5.create_server(token, port = port)
+        serverInfo = fjk5.create_server(token, port = port, serverInfo = config.serverInfo)
         print (serverInfo)
         # if config.testing: pdb.set_trace()
         print (serverInfo.content)
     else :
         print ("error %s: " % response.status_code)
-    # something weird with security groups, so list them
-    
-
     # next we add a public IP to that port
-    extNetwork = filter(lambda name: name['name'] == config.externalNet, networks.json()['networks'])
+    extNetwork = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['externalNet'], networks.json()['networks'])
     # obviously we have to wait a while before assigning a publich ip
     publicNetwork = fjk5.create_global_ip(token, extNetwork[0]['id'], port)
     print (publicNetwork.json()['floatingip']['floating_ip_address'])
     # dispay the most important infos here: IP, vnc
-    listServers.listServers
+    listServers.listServers()
     pdb.set_trace()
     initPassword = fjk5.get_Serverpassword(token, serverInfo.json()['server']['id'])
-    pdb.set_trace()
+    pprint.pprint(initPassword)
+    # pdb.set_trace()
     
 
     
