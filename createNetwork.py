@@ -58,7 +58,7 @@ def main():
         updatedRouter = fjk5.update_router_gateway(token, routerID, extNetwork[0]['id'])
         routerID = updatedRouter.json()['router']['id']
         if config.testing: pdb.set_trace()
-        router_interface = fjk5.add_interface_to_router(token, ourRouter.json()['router']['id'], subnet)
+        router_interface = fjk5.add_interface_to_router(token, ourRouter.json()['router']['id'], subnet[0])
         
     else:
         routerID = router[0]['id']
