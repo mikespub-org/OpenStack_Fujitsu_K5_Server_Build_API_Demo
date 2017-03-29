@@ -7,7 +7,15 @@ This example requires a Fujitsu K5 or OpenStack Project to target.
 It creates everything necessary to have a public login to a server.
 
 It's fully documented on https://allthingscloud.eu
+
 modifications in this repo: allow usage behind proxy. Some additional features / see sample files
 Use at your own risk.
-fjk5.py contains the functions needed by createNetwork, createKeyPair, createserver, listServers.
+fjk5.py contains the functions needed by the demo files.
 you'll need valid credentials - merge them into your local copy of config.py
+
+Refer to the demo Files to see the scope (create server, list servers, list Global IPs and remove the unused ones).
+
+Things to come (help wanted):
+- resize of machines
+- security group rules
+- firewall rules 
