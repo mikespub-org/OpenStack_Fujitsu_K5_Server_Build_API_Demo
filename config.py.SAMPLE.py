@@ -22,7 +22,7 @@ adminPassword='YourK5Password'
 contract='YourK5ContractNum'
 region='uk-1' # or any other region
 projectid='YourK5ProjectID' # might be obsolete
-securityGroup = 'YourSecGroupMust Exist'
+ecurityGroup = 'YourSecGroupMust Exist'
 # securityGroupID = '11113222222333333'
 
 subnetName='yourDesiredSubnetName'
@@ -50,7 +50,7 @@ zoneInfo = { 'uk-1a' : {'externalNet'   : 'inf_az1_ext-net01',
 key='NameOfecretKeyPair'
 
 # this didn't work yet. Would immediately update Ubuntu14 to 16.
-initialLxUpgrade=""" #!/bin/bash
+initialLxUpgrade="""#!/bin/bash
 sudo apt-get -y update
 sudo apt-get -y upgrade
 sudo do-release-upgrade -f DistUpgradeViewNonInteractive
