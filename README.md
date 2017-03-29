@@ -6,7 +6,10 @@ This example requires a Fujitsu K5 or OpenStack Project to target.
 
 It creates everything necessary to have a public login to a server.
 
-It's fully documented on https://allthingscloud.eu
+The basics are documented on https://allthingscloud.eu
+
+For details, refer to the example scripts and config.py.
+
 
 modifications in this repo: allow usage behind proxy. Some additional features / see sample files
 Use at your own risk.
