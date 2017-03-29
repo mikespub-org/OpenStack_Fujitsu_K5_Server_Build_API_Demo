@@ -497,7 +497,8 @@ def create_global_ip(k5token, ext_network_id, port_id, availability_zone = confi
 
 
 def deleteGlobalIP(k5token, globalIpId):
-    networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/floatingips/ ') + globalIpId
+    networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/floatingips/') + globalIpId
+    if config.testing: print (networkURL)
     token = k5token.headers['X-Subject-Token']
     try:
         response = requests.delete(networkURL,
@@ -506,7 +507,6 @@ def deleteGlobalIP(k5token, globalIpId):
                                          'Content-Type': 'application/json',
                                          'Accept': 'application/json'},
                                     proxies=config.htmlProxies)
-        print(response.content)
         return response
     except:
         return ("\nUnexpected error:", sys.exc_info())
@@ -519,8 +519,8 @@ delete unused global IPs
 """
 def deleteUnusedGlobalIPs(k5token):
     for address in list_unusedIPs(k5token) :
-        deleteGlobalIP(k5token, address['id'])
-        print ('deleted IP %s ' % (address['floating_ip_address']) )
+        response = deleteGlobalIP(k5token, address['id'])
+        if response.status_code == 204: print ('deleted IP %s ' % (address['floating_ip_address']) )
 
         
 
