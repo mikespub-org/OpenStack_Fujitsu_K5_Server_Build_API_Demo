@@ -2,13 +2,14 @@
 usage = """Summary:
 The following tutorial demonstrates how the native OpenStack APIs can be used to deploy a server, network, subnet and router
 on the Fujitsu K5 IaaS Platform
-Author: Joerg.schulz@ts.fujitsu.com
 
-calls K5 routines of Graham Land
-Date: 24/03/17
-Github: https://github.com/joergK5Schulz/OpenStack_Fujitsu_K5_Server_Build_API_Demo
-Blog: https://allthingscloud.eu
+Author: Jörg Schulz
+based on work of Graham Land
+Date: 27/01/17
 
+Github: Github: https://github.com/joergK5Schulz/OpenStack_Fujitsu_K5_Server_Build_API_Demo
+
+Modifications: Joerg.schulz (AT ) ts.fujitsu.com
 this one: list all global IPs
 """
 

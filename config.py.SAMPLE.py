@@ -6,10 +6,6 @@ configuration file for k5 api. Caveat: don't upload to github without cleaning
 you'll need your credentials; all other values come from your config needs
 """
 
-from string import Template
-encoding = 'iso-8859-1' # for xml and other purposes
-
-
 import base64
 
 
@@ -22,7 +18,7 @@ adminPassword='YourK5Password'
 contract='YourK5ContractNum'
 region='uk-1' # or any other region
 projectid='YourK5ProjectID' # might be obsolete
-ecurityGroup = 'YourSecGroupMust Exist'
+securityGroup = 'YourSecGroupMust Exist'
 # securityGroupID = '11113222222333333'
 
 subnetName='yourDesiredSubnetName'
@@ -47,7 +43,7 @@ zoneInfo = { 'uk-1a' : {'externalNet'   : 'inf_az1_ext-net01',
              }
 
 
-key='NameOfecretKeyPair'
+key='NameOfSecretKeyPair'
 
 # this didn't work yet. Would immediately update Ubuntu14 to 16.
 initialLxUpgrade="""#!/bin/bash
@@ -70,9 +66,9 @@ ubuntuServerInfo = {
     'initialScript' : initialLxUpgrade
 }
 
-if testing:
-    # serverInfo = ubuntuServerInfo
-    serverInfo = windowsServerInfo
+
+serverInfo = ubuntuServerInfo
+    #     serverInfo = windowsServerInfo
     
 
 

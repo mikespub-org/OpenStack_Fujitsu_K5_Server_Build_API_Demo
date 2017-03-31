@@ -339,7 +339,6 @@ def create_server(k5token,
     if serverInfo['initialScript']: # this will configure your server for your needs
         serverDefinition['server']['user_data'] = base64.b64encode(serverInfo['initialScript'])
     try:
-        if config.testing: pdb.set_trace()
         response = requests.post(computeURL,
                                 headers={'X-Auth-Token':token,
                                          'Content-Type': 'application/json',

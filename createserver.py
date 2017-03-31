@@ -3,14 +3,13 @@ usage = """Summary:
 The following tutorial demonstrates how the native OpenStack APIs can be used to deploy a server, network, subnet and router
 on the Fujitsu K5 IaaS Platform
 
-Author: Joerg.schulz@ts.fujitsu.com
+Author: Jörg Schulz
+based on work of Graham Land
+Date: 27/01/17
 
-calls K5 routines of Graham Land
-Date: 16/03/17
+Github: Github: https://github.com/joergK5Schulz/OpenStack_Fujitsu_K5_Server_Build_API_Demo
 
-Github: https://github.com/allthingscloud
-Blog: https://allthingscloud.eu
-
+Modifications: Joerg.schulz (AT ) ts.fujitsu.com
 
 creates a Server - if it exists already, we return info on that server.
 
