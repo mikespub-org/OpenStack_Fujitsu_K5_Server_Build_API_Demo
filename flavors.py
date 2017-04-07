@@ -40,7 +40,7 @@ def main():
     print (usage)
     token = fjk5.get_scoped_token()
     listFlavors(token)
-    resized = fjk5.resizeServer (token, fjk5.lookForServer (token, config.serverInfo['name'])[0]['id'], '1303')
+    # resized = fjk5.resizeServer (token, fjk5.lookForServer (token, config.serverInfo['name'])[0]['id'], '1303')
     if config.testing: pdb.set_trace()
     print (resized)
     

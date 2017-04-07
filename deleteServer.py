@@ -27,7 +27,7 @@ if config.testing :
 def main():
     print (usage)
     token = fjk5.get_scoped_token()
-    result = fjk5.deleteServer(token, fjk5.lookForServer (token, u'Oceania04LX')[0]['id']  )
+    result = fjk5.deleteServer(token, fjk5.lookForServer (token, u'Oceania03LX')[0]['id']  )
 
     
     if config.testing: pdb.set_trace()

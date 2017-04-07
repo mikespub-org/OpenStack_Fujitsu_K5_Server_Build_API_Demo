@@ -42,7 +42,7 @@ def get_endpoint(k5token, endpoint_type):
                 return ep['endpoints'][0].get('url')
 
 """
-This token is needed to call the APIN functions. Valid for some minutes, so get this for every significant step.
+This token is needed to call the API functions. Valid for some minutes, so get this for every significant step.
 """
 def get_scoped_token(adminUser = config.adminUser ,
                      adminPassword= config.adminPassword,
@@ -368,24 +368,7 @@ get the URL for security groups
 def get_securityUrl (k5token):
     return unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/security-groups')
 
-"""
-return info on a generic subject
-works with networks, routers, ...
-"""
-def list_something(token, url):
-    # if config.testing: print (url)
-    try:
-        headers={'X-Auth-Token': token.headers['X-Subject-Token'],
-                 'Content-Type': 'application/json',
-                 'Accept': 'application/json'}
-        #if config.testing: pdb.set_trace()
-        response = requests.get(url,
-                                headers = headers,
-                                proxies=config.htmlProxies)
-        return response, response.status_code
-    except:
-        return ("\nUnexpected error:", sys.exc_info()), -1
-    
+   
 """
 return a json list of all security groups
 """
@@ -429,6 +412,26 @@ def get_globalIPURL (k5token):
     return unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/floatingips')
 
 """
+return info on a generic subject
+works with networks, routers, ...
+"""
+def list_something(token, url):
+    # if config.testing: print (url)
+    try:
+        headers={'X-Auth-Token': token.headers['X-Subject-Token'],
+                 'Content-Type': 'application/json',
+                 'Accept': 'application/json'}
+        #if config.testing: pdb.set_trace()
+        response = requests.get(url,
+                                headers = headers,
+                                proxies=config.htmlProxies)
+        return response, response.status_code
+    except:
+        return ("\nUnexpected error:", sys.exc_info()), -1
+    return false
+ 
+
+"""
 return a json list of all servers
 """
 def list_servers(token):
@@ -456,7 +459,6 @@ list all our known networks
 """
 def list_networks(token):
     return list_something(token, get_networkURL(token))
-
 
 
 """
