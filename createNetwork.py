@@ -51,16 +51,18 @@ def main():
     router = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['routerName'], routers.json()['routers'])
     if len(router) == 0 :
         ourRouter = fjk5.create_router(token)
+        if config.testing: pdb.set_trace()
         routerID = ourRouter.json()['router']['id']
         # now this router needs some networks
         extNetwork = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['externalNet'] , networks.json()['networks'])
         updatedRouter = fjk5.update_router_gateway(token, routerID, extNetwork[0]['id'])
         routerID = updatedRouter.json()['router']['id']
-        if config.testing: pdb.set_trace()
+        # if config.testing: pdb.set_trace()
         router_interface = fjk5.add_interface_to_router(token, ourRouter.json()['router']['id'], subnet[0])
         
     else:
         routerID = router[0]['id']
+    print (routerID)
 
         
     if config.testing: pdb.set_trace()

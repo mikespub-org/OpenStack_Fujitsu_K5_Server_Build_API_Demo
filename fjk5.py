@@ -373,7 +373,7 @@ return info on a generic subject
 works with networks, routers, ...
 """
 def list_something(token, url):
-    if config.testing: print (url)
+    # if config.testing: print (url)
     try:
         headers={'X-Auth-Token': token.headers['X-Subject-Token'],
                  'Content-Type': 'application/json',
@@ -409,6 +409,12 @@ def getServerDetailURL(token, serverID):
 
 def getServerPortURL(token, serverID):
     return unicode(get_endpoint(token, "compute")) + unicode('/servers/') + serverID + u'/os-interface'
+
+def getFlavorsUrl(token):
+    return unicode(get_endpoint(token, u"compute")) +u'/flavors'
+
+def get_flavorDetailURL(token, flavor):
+    return unicode(get_endpoint(token, u"compute")) +u'/flavors/' + flavor
 
 def getImagesUrl(token):
     return unicode(get_endpoint(token, u"compute")) +u'/images/detail'
@@ -466,7 +472,11 @@ def list_unusedIPs(token):
     return unused
 
 
-# activeImages = 
+"""
+lists available details for the flavorID
+"""
+def getFlavorDetail(token, flavor):
+    return list_something(token, get_flavorDetailURL(token, flavor))[0].json()
 
 """
 dynamic global IP for server
@@ -534,7 +544,24 @@ def list_images(token, filterName = False) :
         activeImages = filter(lambda image: image['name'] == filterName, activeImages)
     return activeImages
 
+"""
+display a list of available flavors.
+"""
+def list_flavors(token, filterName = False) :
+    url = getFlavorsUrl(token)
+    flavors = list_something(token, url)[0].json()['flavors']
+    if filterName :
+        flavors = filter(lambda image: image['name'] == filterName, activeFlavors)
+    return flavors
 
+
+"""
+looks for a specific server by name
+"""
+def lookForServer (token, name):
+    servers = list_servers(token)
+    myServer = eval ("filter(lambda server: server['name'] == '" +  name + "', servers['servers'])")
+    return myServer
 
 
 

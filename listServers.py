@@ -37,10 +37,17 @@ def listServers():
                 print ('port %s,  IP %s'  % (addresses, address['addr']))
         for port in fjk5.getServerPorts(token, server['id']):
             pprint.pprint (port)
+    
+    myServer = fjk5.lookForServer (token, config.serverInfo['name'])
+    print ('Queried Server %s has the ID %s' % (config.serverInfo['name'], myServer[0]['id'])
+    if config.testing: pdb.set_trace()
 
 def main():
     print (usage)
     listServers()
+    
+    
+    
     # here we get the login token as key for all other info
 
 
