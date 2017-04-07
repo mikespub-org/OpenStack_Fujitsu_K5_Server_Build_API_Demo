@@ -39,8 +39,8 @@ def listServers():
             pprint.pprint (port)
     
     myServer = fjk5.lookForServer (token, config.serverInfo['name'])
-    print ('Queried Server %s has the ID %s' % (config.serverInfo['name'], myServer[0]['id'])
-    if config.testing: pdb.set_trace()
+    print ('Queried Server %s has the ID %s' % (config.serverInfo['name'], myServer[0]['id']))
+    if config.testing : pdb.set_trace()
 
 def main():
     print (usage)

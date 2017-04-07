@@ -24,8 +24,8 @@ if config.testing :
 lists all servers for contract defined in config.
 To search for a server, you would impose  a lambda on the servers[] array below.
 """
-def listFlavors():
-    token = fjk5.get_scoped_token()
+def listFlavors(token):
+    
     flavors = fjk5.list_flavors(token)
     for flavor in  flavors :
         # print ('name: %s id %s ram: %s vcpus %s'% (flavor['name'], flavor['id'], flavor['ram'], flavor['vcpus']))
@@ -34,10 +34,15 @@ def listFlavors():
         print ('flavor: %s id %s  ram: %s vcpus %s' % (flavor['name'], flavor['id'], flavorDetail['ram'], flavorDetail['vcpus']))# pprint.pprint(flavor)
     if config.testing: pdb.set_trace()
 
+
+
 def main():
     print (usage)
-    listFlavors()
-    
+    token = fjk5.get_scoped_token()
+    listFlavors(token)
+    resized = fjk5.resizeServer (token, fjk5.lookForServer (token, config.serverInfo['name'])[0]['id'], '1303')
+    if config.testing: pdb.set_trace()
+    print (resized)
     
     
     # here we get the login token as key for all other info

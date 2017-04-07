@@ -407,6 +407,9 @@ def getComputeURL(token):
 def getServerDetailURL(token, serverID):
     return unicode(get_endpoint(token, "compute")) + unicode('/servers/') + serverID
 
+def getServerActionURL(token, serverID):
+    return unicode(get_endpoint(token, "compute")) + unicode('/servers/') + serverID+ u'/action'
+
 def getServerPortURL(token, serverID):
     return unicode(get_endpoint(token, "compute")) + unicode('/servers/') + serverID + u'/os-interface'
 
@@ -471,6 +474,31 @@ def list_unusedIPs(token):
     unused = filter(lambda address: address['port_id'] == None, addresses)
     return unused
 
+"""
+Just try a resize. No sanity checking, no result checking yet.
+"""
+def resizeServer(token, serverID, flavor) :
+    resizeURL = getServerActionURL(token, serverID)
+    response = requests.post(resizeURL,
+                             headers={
+                                     'X-Auth-Token': token.headers['X-Subject-Token'],
+                                     'Content-Type': 'application/json',
+                                     'Accept': 'application/json'},
+                                proxies=config.htmlProxies,
+                                json={  "resize": {  "flavorRef": flavor } } )
+    print ("response is %s - verifying ...." % response.status_code)
+    
+    serverStatus = getServerDetail(token, serverID)['server']['status']
+    verify = (serverStatus == u'VERIFY_RESIZE')
+    if verify:
+        response = requests.post(resizeURL,
+                             headers={
+                                     'X-Auth-Token': token.headers['X-Subject-Token'],
+                                     'Content-Type': 'application/json',
+                                     'Accept': 'application/json'},
+                                proxies=config.htmlProxies,
+                                json= { "confirmResize": 0 } )
+    return response
 
 """
 lists available details for the flavorID
