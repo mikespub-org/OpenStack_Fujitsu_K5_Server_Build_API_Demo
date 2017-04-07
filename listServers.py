@@ -39,8 +39,11 @@ def listServers():
             pprint.pprint (port)
     
     myServer = fjk5.lookForServer (token, config.serverInfo['name'])
-    print ('Queried Server %s has the ID %s' % (config.serverInfo['name'], myServer[0]['id']))
-    if config.testing : pdb.set_trace()
+    # if config.testing : pdb.set_trace()
+    if len ( myServer ) > 0 :
+        print ('Queried Server %s has the ID %s' % (config.serverInfo['name'], myServer[0]['id']))
+    else :
+        print ("Server %s does not exist" % config.serverInfo['name'])
 
 def main():
     print (usage)

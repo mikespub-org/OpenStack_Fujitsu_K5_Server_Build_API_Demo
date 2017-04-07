@@ -501,6 +501,20 @@ def resizeServer(token, serverID, flavor) :
     return response
 
 """
+housekeeping: Delete a server. Without asking.
+"""
+def deleteServer(token, serverID) :
+    deleteURL = getServerDetailURL (token, serverID)
+    response = requests.delete(deleteURL,
+                             headers={
+                                     'X-Auth-Token': token.headers['X-Subject-Token'],
+                                     'Content-Type': 'application/json',
+                                     'Accept': 'application/json'},
+                                proxies=config.htmlProxies )
+    return response
+
+
+"""
 lists available details for the flavorID
 """
 def getFlavorDetail(token, flavor):
