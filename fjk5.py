@@ -382,7 +382,16 @@ return a json list of all routers
 def list_routers(token):
     routerURL = get_routerURL(token)
     return list_something(token, routerURL)
-    
+
+
+"""
+fed up of repeating the same code? use this stub
+"""
+def getStandardHeader(token) :
+    return { 'X-Auth-Token': token,
+             'Content-Type': 'application/json',
+             'Accept': 'application/json'}
+
 # helper functions for the list_functions
 def getComputeURL(token):
     return unicode(get_endpoint(token, "compute")) + unicode('/servers')
@@ -410,6 +419,25 @@ def getServerPasswordURL(token, serverID):
 
 def get_globalIPURL (k5token):
     return unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/floatingips')
+
+def getFirewallURL(k5token):
+    return unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/fw')
+
+def getFirewallsURL(k5token):
+    return getFirewallURL(k5token) + u'/firewalls'
+
+def getFirewallRulesURL(k5token):
+    return getFirewallURL(k5token) + u'/firewall_rules'
+
+def getFirewallRuleDetailsURL(k5token, ruleID):
+    return getFirewallURL(k5token) + u'/firewall_rules/' + ruleID
+
+
+def getFirewallPoliciesURL(k5token):
+    return getFirewallURL(k5token) + u'/firewall_policies'
+
+def getFirewallPoliciesUpdateURL(k5token, policyID):
+    return getFirewallURL(k5token) + u'/firewall_policies/' + policyID
 
 """
 return info on a generic subject
@@ -606,6 +634,145 @@ def lookForServer (token, name):
     servers = list_servers(token)
     myServer = eval ("filter(lambda server: server['name'] == '" +  name + "', servers['servers'])")
     return myServer
+
+"""
+Firewall stubs
+"""
+def listFirewalls(k5token, filterName = False) :
+    url = getFirewallsURL(k5token)
+    firewalls = list_something(k5token, url)[0].json()['firewalls']
+    if filterName:
+        firewalls = filter(lambda fw: fw['name'] == filterName, firewalls)
+    return firewalls
+
+"""
+returns array of firewall policies
+"""
+def listFirewallPolicies(k5token, filterName = False):
+    url = getFirewallPoliciesURL(k5token)
+    policies = list_something(k5token, url)[0].json()['firewall_policies']
+    if filterName:
+        policies = filter(lambda rule: rule['name'] == filterName, policies)
+    return policies 
+
+"""
+lists FirewallRules. If name is given, only rules with given name.
+"""
+def listFirewallRules(k5token, filterName = False) :
+    url = getFirewallRulesURL(k5token)
+    rules = list_something(k5token, url)[0].json()['firewall_rules']
+    # if config.testing: pdb.set_trace()
+    if filterName:
+        rules = filter(lambda rule: rule['name'] == filterName, rules)
+    return rules #
+
+def createFirewallRules(k5token, rules) :
+    url = getFirewallRulesURL(k5token)
+    token = k5token.headers['X-Subject-Token']
+    ruleIDs = []
+    for rule in rules:
+        try:
+            # only add rule if no such rule by name
+            existingRules = listFirewallRules(k5token, rule['name'])
+            if len(existingRules) == 0: 
+                response = requests.post(url,
+                                headers={
+                                     'X-Auth-Token': token,
+                                     'Content-Type': 'application/json',
+                                     'Accept': 'application/json'},
+                                proxies=config.htmlProxies,
+                                json={"firewall_rule": rule} )
+                ruleIDs.append(response[0].json()['firewall_rule']['id'])
+                if config.testing:
+                    pprint.pprint(response.content)
+                    # pdb.set_trace()
+            else: # update rule
+                del(rule['availability_zone']) ## these members must not be changed.
+                del(rule['ip_version'])
+                url = getFirewallRuleDetailsURL(k5token, existingRules[0]['id'])
+                response = requests.put(url, headers = getStandardHeader(token), proxies = config.htmlProxies, json = {"firewall_rule": rule}  )
+                if config.testing:
+                    print (response.content)
+                    pdb.set_trace()
+                ruleIDs.append(existingRules[0]['id'])
+                if config.testing:
+                    print ('rule for %s exists' % rule['name'])
+        except:
+            return ("\nUnexpected error:", sys.exc_info())
+    return ruleIDs 
+
+
+
+
+"""
+this one creates a firewall policy along definition in config.
+It returns the json information on this policy.
+If there already is a policy with 'name', it will be updated.
+"""
+def createFirewallPolicy (k5token, rules = [],
+                          name = config.firewallPolicyName,
+                          description = config.firewallPolicyDescription, 
+                          availabilityZone = config.availabilityZone ) :
+    token = k5token.headers['X-Subject-Token']
+    json = {"firewall_policy": { "firewall_rules": rules,
+                                 "name": name,
+                                 "description" : description } }
+    try :
+        existingPolicies = listFirewallPolicies(k5token, name)
+        if len (existingPolicies) > 0 : # don't create duplicates, but update the policy
+            url = getFirewallPoliciesUpdateURL(k5token, existingPolicies[0]['id'])
+            policy = requests.put(url, headers = getStandardHeader(token), proxies = config.htmlProxies, json = json  )
+            # if config.testing: pdb.set_trace()
+        else:
+            json['firewall_policy']['availability_zone'] =  availabilityZone
+            url = getFirewallPoliciesURL(k5token)
+            policy = requests.post(url, headers = getStandardHeader(token), proxies = config.htmlProxies, json = json  )
+        
+        
+    except:
+        return ("\nUnexpected error:", sys.exc_info())
+    if policy.status_code < 400 :
+        return policy.json()['firewall_policy']
+    else :
+        print (policy.content)
+        return ("\nUnexpected error:", policy.content)
+        
+    
+    
+"""
+creates a firewall and attaches it to all routers (no router parameter given)
+"""
+def createFirewall (k5token, policy ,
+                          name = config.firewallName,
+                          description = config.firewallDescription, 
+                          availabilityZone = config.availabilityZone ) :
+    url = getFirewallsURL(k5token)
+    token = k5token.headers['X-Subject-Token']
+    try :
+        if config.testing:
+            pdb.set_trace()
+        existingFirewalls = listFirewalls(k5token, name)
+        if len (existingFirewalls) > 0 : # don't create duplicates
+            return existingFirewalls[0]
+        fw = requests.post(url,
+                           headers={
+                                     'X-Auth-Token': token,
+                                     'Content-Type': 'application/json',
+                                     'Accept': 'application/json'},
+                           proxies=config.htmlProxies,
+                           json={"firewall": { "firewall_policy_id": policy,
+                                 "name": name,
+                                 "description" : description, 
+                                 "availability_zone" : availabilityZone} } )
+        if config.testing: pdb.set_trace()
+    except:
+        return ("\nUnexpected error:", sys.exc_info())
+    if fw.status_code < 400 :
+        return fw.json()['firewall']
+    else :
+        print (fw.content)
+        return ("\nUnexpected error:", fw.content)
+        
 
 
 
