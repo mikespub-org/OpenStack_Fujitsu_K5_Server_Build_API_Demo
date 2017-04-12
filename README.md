@@ -21,4 +21,6 @@ Refer to the demo Files to see the scope (create server, list servers, list Glob
 Things to come (help wanted):
 - resize of machines
 - security group rules
-- firewall rules 
+- firewall rule definition improved
+
+
