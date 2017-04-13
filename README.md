@@ -49,4 +49,3 @@ Shelve/unshelve.py|	Sends a server to the shelve
 - firewall rule definition improved
 
 
->>>>>>> origin/master
