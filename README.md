@@ -45,3 +45,8 @@ Shelve/unshelve.py|	Sends a server to the shelve
 - autoscale
 - manage images and snapshots
   
+=======
+- firewall rule definition improved
+
+
+>>>>>>> origin/master
