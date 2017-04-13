@@ -32,7 +32,7 @@ if config.testing :
 """
 Endpoint: the URL to be called by subroutines
 """
-def get_endpoint(k5token, endpoint_type):
+def x_get_endpoint(k5token, endpoint_type):
     # list the endpoints
     for ep in k5token.json()['token']['catalog']:
         if len(ep['endpoints'])>0:
@@ -41,20 +41,63 @@ def get_endpoint(k5token, endpoint_type):
                 #pprint.pprint(ep)
                 return ep['endpoints'][0].get('url')
 
+def getEndpointDict(k5token) :
+    endpoints = {}
+    for ep in k5token.json()['token']['catalog']:
+        for endpoint in ep['endpoints']:
+            endpoints[endpoint['name']] = endpoint['url']
+    return endpoints
+
+def get_endpoint(k5token, endpoint_type):
+    return getEndpointDict(k5token)[endpoint_type]
+
+
+
+"""
+This token is needed to call the API functions. Valid for some minutes, so get this for every significant step.
+This one is unscoped - if your projectID is unknown, you have to retrieve it later
+"""
+def getUnscopedToken(adminUser = config.adminUser ,
+                     adminPassword= config.adminPassword,
+                     contract = config.contract,
+                     region = config.region):
+    identityURL = getAuthTokenUrl(region)
+    try:
+        response = requests.post(identityURL,
+                                 headers = {'Content-Type': 'application/json', 
+                                           'Accept': 'application/json'},
+                                 proxies=config.htmlProxies,
+                                 json={"auth":
+                                         {"identity":
+                                          {"methods": ["password"], "password":
+                                           {"user":
+                                           {"domain":
+                                               {"name": contract},
+                                            "name": adminUser,
+                                            "password": adminPassword
+                                            }}},
+                                          }})
+        return response
+    except:
+        return 'Regional Token Scoping Failure'
+
 """
 This token is needed to call the API functions. Valid for some minutes, so get this for every significant step.
 """
 def get_scoped_token(adminUser = config.adminUser ,
                      adminPassword= config.adminPassword,
-                     contract = config.contract,
-                     projectid = config.projectid,
-                     region = config.region):
+                     contract = config.contract,region = config.region):
     identityURL = 'https://identity.' + region + \
         '.cloud.global.fujitsu.com/v3/auth/tokens'
+    # we need to find the projectID, therefore we need an unscoped token:
+    k5UnscopedToken = getUnscopedToken()
+    
+    
+    configuredProject =  filter(lambda project: project['name'] == config.projectName, listProjectsForUser(k5UnscopedToken)['projects'])[0]
     try:
         response = requests.post(identityURL,
-                                 headers={'Content-Type': 'application/json',
-                                          'Accept': 'application/json'},
+                                 headers = {'Content-Type': 'application/json', 
+                                           'Accept': 'application/json'},
                                  proxies=config.htmlProxies,
                                  json={"auth":
                                          {"identity":
@@ -67,11 +110,13 @@ def get_scoped_token(adminUser = config.adminUser ,
                                             }}},
                                           "scope":
                                           {"project":
-                                           {"id": projectid
+                                           {"id": configuredProject['id']
                                             }}}})
         return response
     except:
         return 'Regional Project Token Scoping Failure'
+
+    
 
 """
 creates a new network
@@ -79,11 +124,10 @@ creates a new network
 def create_network(k5token, name = config.zoneInfo[config.availabilityZone]['networkName'] , availability_zone = config.availabilityZone):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/networks')
     print networkURL
-    token = k5token.headers['X-Subject-Token']
+    
     try:
         response = requests.post(networkURL,
-                                 headers={'X-Auth-Token': token,
-                                         'Content-Type': 'application/json'},
+                                 headers=getStandardHeader(k5token),
                                  proxies=config.htmlProxies,
                                  json={
                                             "network":
@@ -109,11 +153,9 @@ def create_subnet(k5token,
                   defaultRoute = config.defaultRoute,
                   availability_zone = config.availabilityZone, ns1 = config.zoneInfo[config.availabilityZone]['nameserver1']  , ns2 = config.zoneInfo[config.availabilityZone]['nameserver2']):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/subnets')
-    token = k5token.headers['X-Subject-Token']
     try:
         response = requests.post(networkURL,
-                                headers={'X-Auth-Token': token,
-                                         'Content-Type': 'application/json'},
+                                headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies,
                                 json={
                                              "subnet": {
@@ -139,11 +181,9 @@ Virtual router.
 def create_router(k5token, name = config.zoneInfo[config.availabilityZone]['routerName'], availability_zone = config.availabilityZone ):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/routers')
     print networkURL
-    token = k5token.headers['X-Subject-Token']
     try:
         response = requests.post(networkURL,
-                                headers={'X-Auth-Token': token,
-                                         'Content-Type': 'application/json'},
+                                headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies,
                                 json={
                                           "router": {
@@ -162,11 +202,9 @@ this one connecty your router with the correct external network.
 def update_router_gateway(k5token, router_id, network_id):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/routers/') + router_id
     print networkURL
-    token = k5token.headers['X-Subject-Token']
     try:
         response = requests.put(networkURL,
-                                headers={'X-Auth-Token': token,
-                                         'Content-Type': 'application/json'},
+                                headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies,
                                 json={"router": {
                                     "external_gateway_info": {
@@ -180,12 +218,8 @@ def update_router_gateway(k5token, router_id, network_id):
 
 def add_interface_to_router(k5token, router_id, subnet_id):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/routers/') + router_id + '/add_router_interface'
-    print networkURL
-    token = k5token.headers['X-Subject-Token']
     try:
-        response = requests.put(networkURL,
-                                headers={'X-Auth-Token': token,
-                                         'Content-Type': 'application/json'},
+        response = requests.put(networkURL, headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies,
                                 json={
                                     "subnet_id": subnet_id})
@@ -199,11 +233,8 @@ creates a security group, not yet demoed here
 """
 def create_security_group(k5token, name, description):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/security-groups')
-    print networkURL
-    token = k5token.headers['X-Subject-Token']
     try:
-        response = requests.post(networkURL,
-                                 headers={'X-Auth-Token': token, 'Content-Type': 'application/json', 'Accept': 'application/json'},
+        response = requests.post(networkURL, headers=getStandardHeader(k5token),
                                  proxies=config.htmlProxies,
                                  json={
                                         "security_group": {
@@ -232,11 +263,8 @@ add a rule for the security group. Not yet demoed here.
 """
 def create_security_group_rule(k5token, security_group_id, direction, portmin, portmax, protocol):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/security-group-rules')
-    print networkURL
-    token = k5token.headers['X-Subject-Token']
     try:
-        response = requests.post(networkURL,
-                                 headers={'X-Auth-Token': token, 'Content-Type': 'application/json', 'Accept': 'application/json'},
+        response = requests.post(networkURL, headers=getStandardHeader(k5token),
                                  proxies=config.htmlProxies,
                                  json={
                                         "security_group_rule": {
@@ -256,20 +284,18 @@ def create_security_group_rule(k5token, security_group_id, direction, portmin, p
 """
 create a port for your new server.
 """
-def create_port(k5token, network_id, security_group_id = config.securityGroupID , availability_zone = config.availabilityZone , name = config.networkPortName):
+def create_port(k5token, network_id,  availability_zone = config.availabilityZone , name = config.networkPortName):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/ports')
-    print networkURL
-    token = k5token.headers['X-Subject-Token']
     # security groups should contain default, else some things will fail during setup (like login credentials). YOu can remove it later if you wish.
-    securityGroups = [security_group_id] if security_group_id else []
+    # we look for the one configured in config. shouldn't break when emtpy. 
+    configuredSecurityGroups = fjk5.listSecurityGroups(token, filterName = config.securityGroup)
+    securityGroups = [configuredSecurityGroups[0]['id']] if len(configuredSecurityGroups) > 0 else  []
     defaultSecurityGroup = getSecurityGroup(k5token, 'default')
     # default1aGroup = getSecurityGroup(k5token, 'secgroup-1a')
     securityGroups.append(defaultSecurityGroup['id'])
     ### securityGroups.append( getSecurityGroup(k5token, 'secgroup-1a')['id'])
     try:
-        response = requests.post(networkURL,
-                                 headers={
-                                     'X-Auth-Token': token, 'Content-Type': 'application/json', 'Accept': 'application/json'},
+        response = requests.post(networkURL, headers=getStandardHeader(k5token),
                                  proxies=config.htmlProxies,
                                  json={"port":
                                        {"network_id": network_id,
@@ -287,14 +313,8 @@ this PRINTS the new keypair. Don't forget to save it - you'll need it for login.
 """
 def create_keypair(k5token, keypair_name = config.key, availability_zone = config.availabilityZone):
     computeURL = unicode(get_endpoint(k5token, "compute")) + unicode('/os-keypairs')
-    print computeURL
-    token = k5token.headers['X-Subject-Token']
     try:
-        response = requests.post(computeURL,
-                                headers={
-                                     'X-Auth-Token': token,
-                                     'Content-Type': 'application/json',
-                                     'Accept': 'application/json'},
+        response = requests.post(computeURL,headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies,
                                 json={
                                     "keypair": {
@@ -315,8 +335,7 @@ This is transferred and stored in clear text, so please change it.
 def create_server(k5token,
                 port,
                 serverInfo ):
-    computeURL = getComputeURL(k5token) 
-    token = k5token.headers['X-Subject-Token']
+    computeURL = getComputeURL(k5token)
     # one could generate this more dynamically, i.e., when parameters are not given: not add them to the dictionary.
     serverDefinition = { "server": {  "name": serverInfo['name'],
                                       "imageRef":  serverInfo['imageRef'],
@@ -339,10 +358,7 @@ def create_server(k5token,
     if serverInfo['initialScript']: # this will configure your server for your needs
         serverDefinition['server']['user_data'] = base64.b64encode(serverInfo['initialScript'])
     try:
-        response = requests.post(computeURL,
-                                headers={'X-Auth-Token':token,
-                                         'Content-Type': 'application/json',
-                                         'Accept':'application/json'},
+        response = requests.post(computeURL, headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies,
                                 json=serverDefinition)
 
@@ -387,12 +403,15 @@ def list_routers(token):
 """
 fed up of repeating the same code? use this stub
 """
-def getStandardHeader(token) :
-    return { 'X-Auth-Token': token,
+def getStandardHeader(k5token) :
+    return { 'X-Auth-Token': k5token.headers['X-Subject-Token'],
              'Content-Type': 'application/json',
              'Accept': 'application/json'}
 
 # helper functions for the list_functions
+def getAuthTokenUrl(region) :
+    return u'https://identity.' + region + u'.cloud.global.fujitsu.com/v3/auth/tokens'
+
 def getComputeURL(token):
     return unicode(get_endpoint(token, "compute")) + unicode('/servers')
 
@@ -432,26 +451,27 @@ def getFirewallRulesURL(k5token):
 def getFirewallRuleDetailsURL(k5token, ruleID):
     return getFirewallURL(k5token) + u'/firewall_rules/' + ruleID
 
-
 def getFirewallPoliciesURL(k5token):
     return getFirewallURL(k5token) + u'/firewall_policies'
 
 def getFirewallPoliciesUpdateURL(k5token, policyID):
     return getFirewallURL(k5token) + u'/firewall_policies/' + policyID
 
+def getSecurityGroupsURL(k5token) :
+    return unicode(get_endpoint(k5token, "networking")) + u'/v2.0/security-groups'
+
+def getProjectsForUserURL(k5token):
+    return get_endpoint(k5token, 'identityv3') + u'/users/' + k5token.json()['token']['user']['id'] + u'/projects'
+
 """
 return info on a generic subject
 works with networks, routers, ...
 """
-def list_something(token, url):
+def list_something(k5token, url):
     # if config.testing: print (url)
     try:
-        headers={'X-Auth-Token': token.headers['X-Subject-Token'],
-                 'Content-Type': 'application/json',
-                 'Accept': 'application/json'}
-        #if config.testing: pdb.set_trace()
         response = requests.get(url,
-                                headers = headers,
+                                headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies)
         return response, response.status_code
     except:
@@ -472,6 +492,17 @@ returns some of the server Details
 def getServerDetail(token, serverID) :
     url = getServerDetailURL(token, serverID)
     return list_something(token, url)[0].json()
+
+"""
+sends a server to deactivated. Action: [shelve|unshelve]
+"""
+def shelveUnshelveServer(k5token, serverID, action) :
+    url = getServerActionURL(k5token, serverID)
+    response = requests.post(url, headers = getStandardHeader(k5token),
+                             proxies=config.htmlProxies,
+                             json = { action : False }   )
+    return response
+                             
 
 """
 returns information about the server Ports
@@ -507,25 +538,17 @@ def list_unusedIPs(token):
 """
 Just try a resize. No sanity checking, no result checking yet.
 """
-def resizeServer(token, serverID, flavor) :
-    resizeURL = getServerActionURL(token, serverID)
-    response = requests.post(resizeURL,
-                             headers={
-                                     'X-Auth-Token': token.headers['X-Subject-Token'],
-                                     'Content-Type': 'application/json',
-                                     'Accept': 'application/json'},
+def resizeServer(k5token, serverID, flavor) :
+    resizeURL = getServerActionURL(k5token, serverID)
+    response = requests.post(resizeURL,headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies,
                                 json={  "resize": {  "flavorRef": flavor } } )
     print ("response is %s - verifying ...." % response.status_code)
     
-    serverStatus = getServerDetail(token, serverID)['server']['status']
+    serverStatus = getServerDetail(k5token, serverID)['server']['status']
     verify = (serverStatus == u'VERIFY_RESIZE')
     if verify:
-        response = requests.post(resizeURL,
-                             headers={
-                                     'X-Auth-Token': token.headers['X-Subject-Token'],
-                                     'Content-Type': 'application/json',
-                                     'Accept': 'application/json'},
+        response = requests.post(resizeURL,headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies,
                                 json= { "confirmResize": 0 } )
     return response
@@ -533,13 +556,9 @@ def resizeServer(token, serverID, flavor) :
 """
 housekeeping: Delete a server. Without asking.
 """
-def deleteServer(token, serverID) :
+def deleteServer(k5token, serverID) :
     deleteURL = getServerDetailURL (token, serverID)
-    response = requests.delete(deleteURL,
-                             headers={
-                                     'X-Auth-Token': token.headers['X-Subject-Token'],
-                                     'Content-Type': 'application/json',
-                                     'Accept': 'application/json'},
+    response = requests.delete(deleteURL,headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies )
     return response
 
@@ -556,13 +575,9 @@ dynamic global IP for server
 def create_global_ip(k5token, ext_network_id, port_id, availability_zone = config.availabilityZone ):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/floatingips')
     print (networkURL)
-    token = k5token.headers['X-Subject-Token']
+    # token = 
     try:
-        response = requests.post(networkURL,
-                                headers={
-                                     'X-Auth-Token': token,
-                                     'Content-Type': 'application/json',
-                                     'Accept': 'application/json'},
+        response = requests.post(networkURL, headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies,
                                 json={
                                              "floatingip": {
@@ -580,13 +595,9 @@ def create_global_ip(k5token, ext_network_id, port_id, availability_zone = confi
 def deleteGlobalIP(k5token, globalIpId):
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/floatingips/') + globalIpId
     if config.testing: print (networkURL)
-    token = k5token.headers['X-Subject-Token']
+    
     try:
-        response = requests.delete(networkURL,
-                                    headers={
-                                         'X-Auth-Token': token,
-                                         'Content-Type': 'application/json',
-                                         'Accept': 'application/json'},
+        response = requests.delete(networkURL,headers=getStandardHeader(k5token),
                                     proxies=config.htmlProxies)
         return response
     except:
@@ -603,7 +614,13 @@ def deleteUnusedGlobalIPs(k5token):
         response = deleteGlobalIP(k5token, address['id'])
         if response.status_code == 204: print ('deleted IP %s ' % (address['floating_ip_address']) )
 
-        
+
+"""
+projects for user by userID
+"""
+def listProjectsForUser(k5token):
+    url = getProjectsForUserURL(k5token)
+    return list_something(k5token, url)[0].json()
 
 """
 display a list of available ACTIVE images. Secondly, a demo on how to filter/search this list.
@@ -634,6 +651,18 @@ def lookForServer (token, name):
     servers = list_servers(token)
     myServer = eval ("filter(lambda server: server['name'] == '" +  name + "', servers['servers'])")
     return myServer
+
+"""
+security groupss
+"""
+def listSecurityGroups(k5token, filterName = False) :
+    url = getSecurityGroupsURL(k5token)
+    securityGroups = list_something(k5token, url)[0].json()['security_groups']
+    if config.testing:
+        pdb.set_trace()
+    if filterName:
+        securityGroups = filter(lambda sg: sg['name'] == filterName, securityGroups)
+    return securityGroups
 
 """
 Firewall stubs
@@ -667,38 +696,33 @@ def listFirewallRules(k5token, filterName = False) :
     return rules #
 
 def createFirewallRules(k5token, rules) :
-    url = getFirewallRulesURL(k5token)
-    token = k5token.headers['X-Subject-Token']
+    
     ruleIDs = []
     for rule in rules:
         try:
             # only add rule if no such rule by name
             existingRules = listFirewallRules(k5token, rule['name'])
-            if len(existingRules) == 0: 
-                response = requests.post(url,
-                                headers={
-                                     'X-Auth-Token': token,
-                                     'Content-Type': 'application/json',
-                                     'Accept': 'application/json'},
-                                proxies=config.htmlProxies,
-                                json={"firewall_rule": rule} )
-                ruleIDs.append(response[0].json()['firewall_rule']['id'])
-                if config.testing:
-                    pprint.pprint(response.content)
-                    # pdb.set_trace()
+            if len(existingRules) == 0:
+                response = requests.post(getFirewallRulesURL(k5token),
+                                         headers=getStandardHeader(k5token),
+                                         proxies=config.htmlProxies,
+                                         json={"firewall_rule": rule} )
+                ruleIDs.append(response.json()['firewall_rule']['id'])
             else: # update rule
                 del(rule['availability_zone']) ## these members must not be changed.
                 del(rule['ip_version'])
                 url = getFirewallRuleDetailsURL(k5token, existingRules[0]['id'])
-                response = requests.put(url, headers = getStandardHeader(token), proxies = config.htmlProxies, json = {"firewall_rule": rule}  )
-                if config.testing:
-                    print (response.content)
-                    pdb.set_trace()
+                response = requests.put(url, headers = getStandardHeader(k5token), proxies = config.htmlProxies, json = {"firewall_rule": rule}  )
+                
                 ruleIDs.append(existingRules[0]['id'])
                 if config.testing:
                     print ('rule for %s exists' % rule['name'])
+            if config.testing:
+                    pprint.pprint(response.content)
         except:
+            if config.testing:pdb.set_trace()
             return ("\nUnexpected error:", sys.exc_info())
+    
     return ruleIDs 
 
 
@@ -713,20 +737,21 @@ def createFirewallPolicy (k5token, rules = [],
                           name = config.firewallPolicyName,
                           description = config.firewallPolicyDescription, 
                           availabilityZone = config.availabilityZone ) :
-    token = k5token.headers['X-Subject-Token']
     json = {"firewall_policy": { "firewall_rules": rules,
                                  "name": name,
                                  "description" : description } }
+    if config.testing:
+            pdb.set_trace()
     try :
         existingPolicies = listFirewallPolicies(k5token, name)
         if len (existingPolicies) > 0 : # don't create duplicates, but update the policy
             url = getFirewallPoliciesUpdateURL(k5token, existingPolicies[0]['id'])
-            policy = requests.put(url, headers = getStandardHeader(token), proxies = config.htmlProxies, json = json  )
+            policy = requests.put(url, headers = getStandardHeader(k5token), proxies = config.htmlProxies, json = json  )
             # if config.testing: pdb.set_trace()
         else:
             json['firewall_policy']['availability_zone'] =  availabilityZone
             url = getFirewallPoliciesURL(k5token)
-            policy = requests.post(url, headers = getStandardHeader(token), proxies = config.htmlProxies, json = json  )
+            policy = requests.post(url, headers = getStandardHeader(k5token), proxies = config.htmlProxies, json = json  )
         
         
     except:
@@ -746,19 +771,15 @@ def createFirewall (k5token, policy ,
                           name = config.firewallName,
                           description = config.firewallDescription, 
                           availabilityZone = config.availabilityZone ) :
-    url = getFirewallsURL(k5token)
-    token = k5token.headers['X-Subject-Token']
-    try :
-        if config.testing:
+    if config.testing:
             pdb.set_trace()
+    url = getFirewallsURL(k5token)
+    try :
+        
         existingFirewalls = listFirewalls(k5token, name)
         if len (existingFirewalls) > 0 : # don't create duplicates
             return existingFirewalls[0]
-        fw = requests.post(url,
-                           headers={
-                                     'X-Auth-Token': token,
-                                     'Content-Type': 'application/json',
-                                     'Accept': 'application/json'},
+        fw = requests.post(url,headers=getStandardHeader(k5token),
                            proxies=config.htmlProxies,
                            json={"firewall": { "firewall_policy_id": policy,
                                  "name": name,

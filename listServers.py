@@ -10,6 +10,7 @@ Github: https://github.com/joergK5Schulz/OpenStack_Fujitsu_K5_Server_Build_API_D
 
 
 this one: listServers and search a server.
+list Security Groups and print details on the one configured in config.py
 """
 
 import config
@@ -45,9 +46,16 @@ def listServers():
     else :
         print ("Server %s does not exist" % config.serverInfo['name'])
 
+def listSecurityGroups() :
+    token = fjk5.get_scoped_token()
+    # pdb.set_trace()
+    securityGroups = fjk5.listSecurityGroups(token, filterName = config.securityGroup)
+    pprint.pprint(securityGroups)
+
 def main():
     print (usage)
     listServers()
+    listSecurityGroups()
     
     
     
