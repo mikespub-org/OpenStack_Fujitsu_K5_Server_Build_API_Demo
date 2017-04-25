@@ -21,7 +21,9 @@ Refer to the demo Files to see the scope
 Script	|Description
 ---|---
 fjk5.py|	Main script. Contains all subroutines. If called directly,  should present a list of available operating system images.
-listServers.py|	displays all server details for your contract including the clear text windows password and IP information
+listServers.py|	displays all server details for your contract including the clear text windows password and IP information.
+Displays info about your security Groups.
+listSnapshots: display all your current snapshots
 createKeyPair.py|	Generates a Key Pair / copy the output on to safe place (again: read API documentation)
 getGlobalIP.py|	should be renamed: it lists all your global IPS and deletes the unallocated ones.
 createNetwork.py|	Creates a network along the configuration in config.py
@@ -30,7 +32,7 @@ createserver.py|	Creates a new server along the configuration in config.py
 Deleteserver.py|	Shows how you can delete a server by ‘name’
 config.py|	Contains all your security and server parameter information. One day, credentials will be moved  out. Another day, maybe HEAT templates might get called. Didn’t research into this one yet.
 firewall.py|	Creates firewall rules, a firewall policy and attaches that to all routers. Lists firewall rules. Updates existing rules from rules descripbed in config file.
-Shelve/unshelve.py|	Sends a server to the shelve 
+Shelve/unshelve.py|	Sends a server to the shelve; takes it back 
 
 
 
@@ -43,9 +45,12 @@ Shelve/unshelve.py|	Sends a server to the shelve
   - search for rules by properties
   - multiple firewall policies
 - autoscale
-- manage images and snapshots
-  
-=======
-- firewall rule definition improved
+- manage images and snapshots (started: getSnapshots)
 
-
+## recent changes
+- firewall rule definition improved in config.py
+- shelve/unshelve
+- retrieve projectid from system instead of definition in config (use name instead, now)
+- some fixes in createNetwork
+- some cleanup in listservers
+- added fjk5.getSnapshots (returns list of all your snapshots)

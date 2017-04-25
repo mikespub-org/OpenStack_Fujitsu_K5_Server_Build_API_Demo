@@ -37,35 +37,34 @@ def main():
         if len(network) == 0:
             ourNetwork = fjk5.create_network(token)
             networkID = ourNetwork.json()['network']['id']
-            subnet = fjk5.create_subnet(token, networkID)
+            subnet = fjk5.create_subnet(token, networkID).json()
         else:
             networkID = network[0]['id']
-            subnet = network[0]['subnets']
+            subnet = network[0]['subnets'][0]
         print ('network %s: ' % networkID)
         
     else :
         print ("error %s: " % response.status_code)
     # we need a router
     routers, status = fjk5.list_routers(token)
-    # if config.testing: pdb.set_trace()
     router = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['routerName'], routers.json()['routers'])
     if len(router) == 0 :
         ourRouter = fjk5.create_router(token)
-        if config.testing: pdb.set_trace()
+        
         routerID = ourRouter.json()['router']['id']
         # now this router needs some networks
         extNetwork = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['externalNet'] , networks.json()['networks'])
         updatedRouter = fjk5.update_router_gateway(token, routerID, extNetwork[0]['id'])
         routerID = updatedRouter.json()['router']['id']
-        # if config.testing: pdb.set_trace()
-        router_interface = fjk5.add_interface_to_router(token, ourRouter.json()['router']['id'], subnet[0])
+        if config.testing: pdb.set_trace()
+        router_interface = fjk5.add_interface_to_router(token, routerID, subnet)
         
     else:
-        routerID = router[0]['id']
+        routerID = routers[0]['id']
     print (routerID)
 
         
-    if config.testing: pdb.set_trace()
+    # if config.testing: pdb.set_trace()
     
     
     

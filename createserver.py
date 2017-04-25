@@ -38,7 +38,7 @@ def main():
         networkID = network[0]['id']
         print ('network %s: ' % networkID)
         # create a port
-        portInfo = fjk5.create_port(token, networkID, security_group_id = securityGroup['id'] if securityGroup else False)
+        portInfo = fjk5.create_port(token, networkID)
         
         port = portInfo.json()['port'].get('id')
         # this one creates the server

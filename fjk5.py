@@ -79,7 +79,16 @@ def getUnscopedToken(adminUser = config.adminUser ,
                                           }})
         return response
     except:
-        return 'Regional Token Scoping Failure'
+        return 'Token Scoping Failure'
+
+"""
+returns the projectID (tenant_id) 
+"""
+def getProjectID(name) :
+    k5UnscopedToken = getUnscopedToken()
+    configuredProject =  filter(lambda project: project['name'] == name, listProjectsForUser(k5UnscopedToken)['projects'])[0]
+    return configuredProject['id']
+
 
 """
 This token is needed to call the API functions. Valid for some minutes, so get this for every significant step.
@@ -90,10 +99,7 @@ def get_scoped_token(adminUser = config.adminUser ,
     identityURL = 'https://identity.' + region + \
         '.cloud.global.fujitsu.com/v3/auth/tokens'
     # we need to find the projectID, therefore we need an unscoped token:
-    k5UnscopedToken = getUnscopedToken()
-    
-    
-    configuredProject =  filter(lambda project: project['name'] == config.projectName, listProjectsForUser(k5UnscopedToken)['projects'])[0]
+    projectID = getProjectID(config.projectName) 
     try:
         response = requests.post(identityURL,
                                  headers = {'Content-Type': 'application/json', 
@@ -110,7 +116,7 @@ def get_scoped_token(adminUser = config.adminUser ,
                                             }}},
                                           "scope":
                                           {"project":
-                                           {"id": configuredProject['id']
+                                           {"id": projectID
                                             }}}})
         return response
     except:
@@ -288,7 +294,7 @@ def create_port(k5token, network_id,  availability_zone = config.availabilityZon
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/ports')
     # security groups should contain default, else some things will fail during setup (like login credentials). YOu can remove it later if you wish.
     # we look for the one configured in config. shouldn't break when emtpy. 
-    configuredSecurityGroups = fjk5.listSecurityGroups(token, filterName = config.securityGroup)
+    configuredSecurityGroups = listSecurityGroups(k5token, filterName = config.securityGroup)
     securityGroups = [configuredSecurityGroups[0]['id']] if len(configuredSecurityGroups) > 0 else  []
     defaultSecurityGroup = getSecurityGroup(k5token, 'default')
     # default1aGroup = getSecurityGroup(k5token, 'secgroup-1a')
@@ -463,6 +469,9 @@ def getSecurityGroupsURL(k5token) :
 def getProjectsForUserURL(k5token):
     return get_endpoint(k5token, 'identityv3') + u'/users/' + k5token.json()['token']['user']['id'] + u'/projects'
 
+def getStorageURL(k5token, projectName = config.projectName) :
+     return get_endpoint(k5token, "blockstoragev2" ) + "/snapshots"#+  "/v2/" +  getProjectID(projectName) 
+
 """
 return info on a generic subject
 works with networks, routers, ...
@@ -482,16 +491,24 @@ def list_something(k5token, url):
 """
 return a json list of all servers
 """
-def list_servers(token):
-    url = getComputeURL(token)
-    return list_something(token, url)[0].json()
+def list_servers(k5token):
+    url = getComputeURL(k5token)
+    return list_something(k5token, url)[0].json()
     
 """
 returns some of the server Details
 """
-def getServerDetail(token, serverID) :
-    url = getServerDetailURL(token, serverID)
-    return list_something(token, url)[0].json()
+def getServerDetail(k5token, serverID) :
+    url = getServerDetailURL(k5token, serverID)
+    return list_something(k5token, url)[0].json()
+
+"""
+lists snapshots for current project
+"""
+def getSnapshots(k5token, projectName) :
+    url = getStorageURL (k5token, projectName )
+    return list_something(k5token, url)[0].json()
+
 
 """
 sends a server to deactivated. Action: [shelve|unshelve]
@@ -658,8 +675,6 @@ security groupss
 def listSecurityGroups(k5token, filterName = False) :
     url = getSecurityGroupsURL(k5token)
     securityGroups = list_something(k5token, url)[0].json()['security_groups']
-    if config.testing:
-        pdb.set_trace()
     if filterName:
         securityGroups = filter(lambda sg: sg['name'] == filterName, securityGroups)
     return securityGroups

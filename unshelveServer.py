@@ -9,7 +9,7 @@ Date: 24/03/17
 Github: https://github.com/joergK5Schulz/OpenStack_Fujitsu_K5_Server_Build_API_Demo
 
 
-this one: shelves a server.
+this one: UNshelves a server.
 
 """
 

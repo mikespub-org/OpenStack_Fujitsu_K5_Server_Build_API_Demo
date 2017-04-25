@@ -30,7 +30,7 @@ def printAuthInfo():
     pprint.pprint(fjk5.getEndpointDict(k5UnscopedToken))
     projectsForUser = fjk5.listProjectsForUser(k5UnscopedToken)
     pprint.pprint(projectsForUser)
-    if config.testing: pdb.set_trace()
+    
     configuredProject =  filter(lambda project: project['name'] == config.projectName, projectsForUser['projects'])[0]
     pprint.pprint(configuredProject)
     

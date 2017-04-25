@@ -25,37 +25,44 @@ if config.testing :
 lists all servers for contract defined in config.
 To search for a server, you would impose  a lambda on the servers[] array below.
 """
-def listServers():
-    token = fjk5.get_scoped_token()
+def listServers(k5token):
+    
     # pdb.set_trace()
-    servers = fjk5.list_servers(token)
+    servers = fjk5.list_servers(k5token)
     for server in  servers['servers']:
         print ('name: %s id %s' % (server['name'], server['id']))
-        serverDetail = fjk5.getServerDetail(token, server['id'])
+        serverDetail = fjk5.getServerDetail(k5token, server['id'])
         pprint.pprint(serverDetail)
         for addresses in serverDetail['server']['addresses'].keys():
             for address in serverDetail['server']['addresses'][addresses] :
                 print ('port %s,  IP %s'  % (addresses, address['addr']))
-        for port in fjk5.getServerPorts(token, server['id']):
+        for port in fjk5.getServerPorts(k5token, server['id']):
             pprint.pprint (port)
     
-    myServer = fjk5.lookForServer (token, config.serverInfo['name'])
+    myServer = fjk5.lookForServer (k5token, config.serverInfo['name'])
     # if config.testing : pdb.set_trace()
     if len ( myServer ) > 0 :
         print ('Queried Server %s has the ID %s' % (config.serverInfo['name'], myServer[0]['id']))
     else :
         print ("Server %s does not exist" % config.serverInfo['name'])
 
-def listSecurityGroups() :
-    token = fjk5.get_scoped_token()
-    # pdb.set_trace()
-    securityGroups = fjk5.listSecurityGroups(token, filterName = config.securityGroup)
+def listSecurityGroups(k5token) :
+    
+    securityGroups = fjk5.listSecurityGroups(k5token, filterName = config.securityGroup)
     pprint.pprint(securityGroups)
+    # return token
+
+def listSnapshots(k5token):
+    snapshots = fjk5.getSnapshots(k5token, config.projectName)
+    pprint.pprint(snapshots)
+    
 
 def main():
     print (usage)
-    listServers()
-    listSecurityGroups()
+    k5token =  fjk5.get_scoped_token()
+    listServers(k5token)
+    listSecurityGroups(k5token)
+    listSnapshots(k5token)
     
     
     
