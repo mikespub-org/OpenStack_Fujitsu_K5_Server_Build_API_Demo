@@ -21,9 +21,7 @@ Refer to the demo Files to see the scope
 Script	|Description
 ---|---
 fjk5.py|	Main script. Contains all subroutines. If called directly,  should present a list of available operating system images.
-listServers.py|	displays all server details for your contract including the clear text windows password and IP information.
-Displays info about your security Groups.
-listSnapshots: display all your current snapshots
+listServers.py|	displays all server details for your contract including the clear text windows password and IP information. Displays info about your security Groups. listSnapshots: display all your current snapshots
 createKeyPair.py|	Generates a Key Pair / copy the output on to safe place (again: read API documentation)
 getGlobalIP.py|	should be renamed: it lists all your global IPS and deletes the unallocated ones.
 createNetwork.py|	Creates a network along the configuration in config.py
