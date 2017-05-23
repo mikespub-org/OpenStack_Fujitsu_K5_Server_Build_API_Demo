@@ -61,7 +61,7 @@ def main():
     print (usage)
     k5token =  fjk5.get_scoped_token()
     listServers(k5token)
-    listSecurityGroups(k5token)
+    # listSecurityGroups(k5token)
     listSnapshots(k5token)
     
     

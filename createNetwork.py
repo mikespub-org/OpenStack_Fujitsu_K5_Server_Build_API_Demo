@@ -31,6 +31,7 @@ def main():
     # print(theToken)
     # before we start we need info about the network
     networks, status = fjk5.list_networks(token)
+    if config.testing: pdb.set_trace()
     if status < 400 : # we now have a list of dictionaries containing the network
         network = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['networkName'], networks.json()['networks'])
         # if this net doesn't exist, we create it
@@ -54,13 +55,14 @@ def main():
         routerID = ourRouter.json()['router']['id']
         # now this router needs some networks
         extNetwork = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['externalNet'] , networks.json()['networks'])
+        if config.testing: pdb.set_trace()
         updatedRouter = fjk5.update_router_gateway(token, routerID, extNetwork[0]['id'])
         routerID = updatedRouter.json()['router']['id']
         if config.testing: pdb.set_trace()
         router_interface = fjk5.add_interface_to_router(token, routerID, subnet)
         
     else:
-        routerID = routers[0]['id']
+        routerID = router[0]['id']
     print (routerID)
 
         

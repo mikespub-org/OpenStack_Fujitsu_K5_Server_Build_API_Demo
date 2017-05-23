@@ -470,7 +470,10 @@ def getProjectsForUserURL(k5token):
     return get_endpoint(k5token, 'identityv3') + u'/users/' + k5token.json()['token']['user']['id'] + u'/projects'
 
 def getStorageURL(k5token, projectName = config.projectName) :
-     return get_endpoint(k5token, "blockstoragev2" ) + "/snapshots"#+  "/v2/" +  getProjectID(projectName) 
+     return get_endpoint(k5token, "blockstoragev2" ) + "/snapshots"#+  "/v2/" +  getProjectID(projectName)
+
+def getStorageActionURL (k5token, projectName, snapshotID ) :
+    return getStorageURL(k5token, projectName) + u'/' + snapshotID + u'/action'
 
 """
 return info on a generic subject
@@ -509,6 +512,16 @@ def getSnapshots(k5token, projectName) :
     url = getStorageURL (k5token, projectName )
     return list_something(k5token, url)[0].json()
 
+
+"""
+restores snapshot for current project
+"""
+def restoreSnapshot(k5token, projectName, snapshotID) :
+    url = getStorageActionURL (k5token, projectName, snapshotID )
+    response = requests.post(url, headers = getStandardHeader(k5token),
+                             proxies=config.htmlProxies,
+                             json = {  "fcx-restore": {}  }   )
+    return response
 
 """
 sends a server to deactivated. Action: [shelve|unshelve]
@@ -574,7 +587,7 @@ def resizeServer(k5token, serverID, flavor) :
 housekeeping: Delete a server. Without asking.
 """
 def deleteServer(k5token, serverID) :
-    deleteURL = getServerDetailURL (token, serverID)
+    deleteURL = getServerDetailURL (k5token, serverID)
     response = requests.delete(deleteURL,headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies )
     return response
@@ -723,18 +736,24 @@ def createFirewallRules(k5token, rules) :
                                          proxies=config.htmlProxies,
                                          json={"firewall_rule": rule} )
                 ruleIDs.append(response.json()['firewall_rule']['id'])
+                if config.testing:
+                    print ('creating rule %s' % rule['name'])
             else: # update rule
+                if config.testing:
+                    print ('modifying rule %s' % rule['name'])
+                    # pdb.set_trace()
                 del(rule['availability_zone']) ## these members must not be changed.
                 del(rule['ip_version'])
                 url = getFirewallRuleDetailsURL(k5token, existingRules[0]['id'])
                 response = requests.put(url, headers = getStandardHeader(k5token), proxies = config.htmlProxies, json = {"firewall_rule": rule}  )
                 
                 ruleIDs.append(existingRules[0]['id'])
-                if config.testing:
-                    print ('rule for %s exists' % rule['name'])
+                
+                    
             if config.testing:
                     pprint.pprint(response.content)
         except:
+            print(response.content)
             if config.testing:pdb.set_trace()
             return ("\nUnexpected error:", sys.exc_info())
     
@@ -755,14 +774,13 @@ def createFirewallPolicy (k5token, rules = [],
     json = {"firewall_policy": { "firewall_rules": rules,
                                  "name": name,
                                  "description" : description } }
-    if config.testing:
-            pdb.set_trace()
     try :
         existingPolicies = listFirewallPolicies(k5token, name)
         if len (existingPolicies) > 0 : # don't create duplicates, but update the policy
             url = getFirewallPoliciesUpdateURL(k5token, existingPolicies[0]['id'])
+            if config.testing: pdb.set_trace()
             policy = requests.put(url, headers = getStandardHeader(k5token), proxies = config.htmlProxies, json = json  )
-            # if config.testing: pdb.set_trace()
+            
         else:
             json['firewall_policy']['availability_zone'] =  availabilityZone
             url = getFirewallPoliciesURL(k5token)
