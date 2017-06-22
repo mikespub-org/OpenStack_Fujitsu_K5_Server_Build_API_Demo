@@ -11,7 +11,7 @@ Github: Github: https://github.com/joergK5Schulz/OpenStack_Fujitsu_K5_Server_Bui
 
 Modifications: Joerg.schulz (AT ) ts.fujitsu.com
 
-creates a Server - if it exists already, we return info on that server.
+creates a Server using spec in config.py.
 
 
 """
@@ -38,29 +38,24 @@ def main():
         networkID = network[0]['id']
         print ('network %s: ' % networkID)
         # create a port
-        portInfo = fjk5.create_port(k5token, networkID)
+        portInfo = fjk5.create_port(k5token, networkID, fixedIP = config.serverInfo['fixedIP'])
         
         port = portInfo.json()['port'].get('id')
         # this one creates the server
-        
         serverInfo = fjk5.create_server(k5token, port = port, serverInfo = config.serverInfo)
         print (serverInfo)
-        # if config.testing: pdb.set_trace()
         print (serverInfo.content)
     else :
         print ("error %s: " % response.status_code)
     # next we add a public IP to that port
     extNetwork = filter(lambda name: name['name'] == config.zoneInfo[config.availabilityZone]['externalNet'], networks.json()['networks'])
-    # obviously we have to wait a while before assigning a public ip
-    pdb.set_trace()
     publicNetwork = fjk5.create_global_ip(k5token, extNetwork[0]['id'], port)
-    print (publicNetwork.json()['floatingip']['floating_ip_address'])
+    
     # dispay the most important infos here: IP, vnc
     listServers.listServers(k5token)
-    
     initPassword = fjk5.get_Serverpassword(k5token, serverInfo.json()['server']['id'])
+    print (publicNetwork.json()['floatingip']['floating_ip_address'])
     pprint.pprint(initPassword)
-    # pdb.set_trace()
     
 
     
