@@ -9,7 +9,7 @@ Date: 24/03/17
 Github: https://github.com/joergK5Schulz/OpenStack_Fujitsu_K5_Server_Build_API_Demo
 
 
-this one: deletes a server name is hardcoded here, for heavens sake.
+this one: deletes a server // name from config.py
 """
 
 import config
@@ -26,11 +26,16 @@ if config.testing :
 
 def main():
     print (usage)
-    token = fjk5.get_scoped_token()
-    result = fjk5.deleteServer(token, fjk5.lookForServer (token, u'Oceania03LX')[0]['id']  )
+    k5token = fjk5.get_scoped_token()
+    # delete ports first
+    serverID = fjk5.lookForServer (k5token, config.serverInfo['name'])[0]['id']
+    for port in fjk5.getServerPorts(k5token, serverID):
+            pprint.pprint (port)
+            fjk5.deletePort(k5token, port['port_id'])
+    result = fjk5.deleteServer(k5token,  serverID )
 
     
-    if config.testing: pdb.set_trace()
+    # if config.testing: pdb.set_trace()
     print (result)
     
     

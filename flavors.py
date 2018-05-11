@@ -39,8 +39,8 @@ def listFlavors(token):
 def main():
     print (usage)
     k5token = fjk5.get_scoped_token()
-    # listFlavors(k5token)
-    resized = fjk5.resizeServer (k5token, fjk5.lookForServer (k5token, config.serverInfo['name'])[0]['id'], '1301')
+    listFlavors(k5token)
+    # resized = fjk5.resizeServer (k5token, fjk5.lookForServer (k5token, config.serverInfo['name'])[0]['id'], '1301')
     if config.testing: pdb.set_trace()
     print (resized)
     

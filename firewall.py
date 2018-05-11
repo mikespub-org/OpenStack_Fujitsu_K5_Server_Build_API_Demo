@@ -43,11 +43,14 @@ def listFirewalls(k5token):
 def main():
     print (usage)
     k5token = fjk5.get_scoped_token()
-    #listFirewalls(k5token)
+    listFirewalls(k5token)
+    if config.testing: pdb.set_trace()
     ruleIDs = fjk5.createFirewallRules(k5token, config.firewallRules) # creates rules as defined in config
+    
     
     # create firewall policy with all these rules
     policy = fjk5.createFirewallPolicy(k5token = k5token, rules = ruleIDs)
+    if config.testing: pdb.set_trace()
     firewall = fjk5.createFirewall(k5token = k5token, policy = policy['id'])
     # create firewall for the router defined in config with all these rules
     if config.testing: pdb.set_trace()

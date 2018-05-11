@@ -32,14 +32,7 @@ if config.testing :
 """
 Endpoint: the URL to be called by subroutines
 """
-def x_get_endpoint(k5token, endpoint_type):
-    # list the endpoints
-    for ep in k5token.json()['token']['catalog']:
-        if len(ep['endpoints'])>0:
-            # if this is the endpoint that  I'm looking for return the url
-            if endpoint_type == ep['endpoints'][0].get('name'):
-                #pprint.pprint(ep)
-                return ep['endpoints'][0].get('url')
+
 
 def getEndpointDict(k5token) :
     endpoints = {}
@@ -181,6 +174,8 @@ def create_subnet(k5token,
         return ("\nUnexpected error:", sys.exc_info())
 
 
+
+
 """
 Virtual router. 
 """
@@ -231,6 +226,8 @@ def add_interface_to_router(k5token, router_id, subnet_id):
                                     "subnet_id": subnet_id})
         return response
     except:
+        print('error adding interface to router')
+        if config.testing: pdb.set_trace()
         return ("\nUnexpected error:", sys.exc_info())
 
 
@@ -287,10 +284,11 @@ def create_security_group_rule(k5token, security_group_id, direction, portmin, p
         return ("\nUnexpected error:", sys.exc_info())
 
 
-"""
-create a port for your new server.
-"""
-def create_port(k5token, network_id,  availability_zone = config.availabilityZone , name = config.networkPortName):
+
+def create_port(k5token, network_id,  availability_zone = config.availabilityZone , name = config.networkPortName, fixedIP = False):
+    """
+    create a port for your new server.
+    """
     networkURL = unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/ports')
     # security groups should contain default, else some things will fail during setup (like login credentials). YOu can remove it later if you wish.
     # we look for the one configured in config. shouldn't break when emtpy. 
@@ -300,15 +298,19 @@ def create_port(k5token, network_id,  availability_zone = config.availabilityZon
     # default1aGroup = getSecurityGroup(k5token, 'secgroup-1a')
     securityGroups.append(defaultSecurityGroup['id'])
     ### securityGroups.append( getSecurityGroup(k5token, 'secgroup-1a')['id'])
+    portInfo = {"network_id": network_id,
+                "name": name,
+                "availability_zone": availability_zone,
+                "security_groups": securityGroups }
+    if fixedIP: # look for a subnet and assign IP there
+        # subnet = getSubnets(k5token, network_id)[0]
+        # portInfo['fixed_ips'] = {  "subnet_id": subnet, "ip_address": fixedIP}
+        portInfo['fixed_ips'] = [ {   "ip_address": fixedIP }  ]
     try:
         response = requests.post(networkURL, headers=getStandardHeader(k5token),
                                  proxies=config.htmlProxies,
-                                 json={"port":
-                                       {"network_id": network_id,
-                                        "name": name,
-                                        "admin_state_up": True,
-                                        "availability_zone": availability_zone,
-                                        "security_groups": securityGroups }})
+                                 json={"port": portInfo})
+        if config.testing: pdb.set_trace()
         return response
     except:
         return ("\nUnexpected error:", sys.exc_info())
@@ -377,6 +379,14 @@ get the URL for networking operations
 """
 def get_networkURL (k5token):
     return unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/networks')
+
+
+def getNetworkDetailURL (k5token, networkID):
+    """
+    get the URL for network details for 1 network
+    """
+    return unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/networks/') + networkID
+    
 
 """
 get the URL for networking operations
@@ -470,7 +480,13 @@ def getProjectsForUserURL(k5token):
     return get_endpoint(k5token, 'identityv3') + u'/users/' + k5token.json()['token']['user']['id'] + u'/projects'
 
 def getStorageURL(k5token, projectName = config.projectName) :
-     return get_endpoint(k5token, "blockstoragev2" ) + "/snapshots"#+  "/v2/" +  getProjectID(projectName) 
+     return get_endpoint(k5token, "blockstoragev2" ) + "/snapshots"#+  "/v2/" +  getProjectID(projectName)
+
+def getStorageActionURL (k5token, projectName, snapshotID ) :
+    return getStorageURL(k5token, projectName) + u'/' + snapshotID + u'/action'
+
+def getPortDetailURL(k5token, projectName = config.projectName, portID = False) :
+     return unicode(get_endpoint(k5token, "networking")) + unicode('/v2.0/ports/') + portID
 
 """
 return info on a generic subject
@@ -511,6 +527,16 @@ def getSnapshots(k5token, projectName) :
 
 
 """
+restores snapshot for current project
+"""
+def restoreSnapshot(k5token, projectName, snapshotID) :
+    url = getStorageActionURL (k5token, projectName, snapshotID )
+    response = requests.post(url, headers = getStandardHeader(k5token),
+                             proxies=config.htmlProxies,
+                             json = {  "fcx-restore": {}  }   )
+    return response
+
+"""
 sends a server to deactivated. Action: [shelve|unshelve]
 """
 def shelveUnshelveServer(k5token, serverID, action) :
@@ -536,6 +562,14 @@ list all our known networks
 def list_networks(token):
     return list_something(token, get_networkURL(token))
 
+
+def getSubnets(token, networkID) : 
+    """
+    list all subnets for the given network
+    """
+    networkInfo = list_something(token, getNetworkDetailURL(token, networkID))
+    subnets = networkInfo[0].json()['network']['subnets']
+    return subnets
 
 """
 list all our own global IPs
@@ -574,7 +608,7 @@ def resizeServer(k5token, serverID, flavor) :
 housekeeping: Delete a server. Without asking.
 """
 def deleteServer(k5token, serverID) :
-    deleteURL = getServerDetailURL (token, serverID)
+    deleteURL = getServerDetailURL (k5token, serverID)
     response = requests.delete(deleteURL,headers=getStandardHeader(k5token),
                                 proxies=config.htmlProxies )
     return response
@@ -630,6 +664,23 @@ def deleteUnusedGlobalIPs(k5token):
     for address in list_unusedIPs(k5token) :
         response = deleteGlobalIP(k5token, address['id'])
         if response.status_code == 204: print ('deleted IP %s ' % (address['floating_ip_address']) )
+
+
+def deletePort(k5token, portID):
+    """
+    delete specified port.
+    """
+    portURL = getPortDetailURL(k5token, portID = portID)
+    
+    try:
+        response = requests.delete(portURL,headers=getStandardHeader(k5token),
+                                    proxies=config.htmlProxies)
+        return response
+    except:
+        return ("\nUnexpected error:", sys.exc_info())
+        
+ 
+
 
 
 """
@@ -723,18 +774,24 @@ def createFirewallRules(k5token, rules) :
                                          proxies=config.htmlProxies,
                                          json={"firewall_rule": rule} )
                 ruleIDs.append(response.json()['firewall_rule']['id'])
+                if config.testing:
+                    print ('creating rule %s' % rule['name'])
             else: # update rule
+                if config.testing:
+                    print ('modifying rule %s' % rule['name'])
+                    # pdb.set_trace()
                 del(rule['availability_zone']) ## these members must not be changed.
                 del(rule['ip_version'])
                 url = getFirewallRuleDetailsURL(k5token, existingRules[0]['id'])
                 response = requests.put(url, headers = getStandardHeader(k5token), proxies = config.htmlProxies, json = {"firewall_rule": rule}  )
                 
                 ruleIDs.append(existingRules[0]['id'])
-                if config.testing:
-                    print ('rule for %s exists' % rule['name'])
+                
+                    
             if config.testing:
                     pprint.pprint(response.content)
         except:
+            print(response.content)
             if config.testing:pdb.set_trace()
             return ("\nUnexpected error:", sys.exc_info())
     
@@ -755,14 +812,13 @@ def createFirewallPolicy (k5token, rules = [],
     json = {"firewall_policy": { "firewall_rules": rules,
                                  "name": name,
                                  "description" : description } }
-    if config.testing:
-            pdb.set_trace()
     try :
         existingPolicies = listFirewallPolicies(k5token, name)
         if len (existingPolicies) > 0 : # don't create duplicates, but update the policy
             url = getFirewallPoliciesUpdateURL(k5token, existingPolicies[0]['id'])
+            if config.testing: pdb.set_trace()
             policy = requests.put(url, headers = getStandardHeader(k5token), proxies = config.htmlProxies, json = json  )
-            # if config.testing: pdb.set_trace()
+            
         else:
             json['firewall_policy']['availability_zone'] =  availabilityZone
             url = getFirewallPoliciesURL(k5token)

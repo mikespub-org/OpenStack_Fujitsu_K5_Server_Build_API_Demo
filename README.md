@@ -30,7 +30,8 @@ createserver.py|	Creates a new server along the configuration in config.py
 Deleteserver.py|	Shows how you can delete a server by ‘name’
 config.py|	Contains all your security and server parameter information. One day, credentials will be moved  out. Another day, maybe HEAT templates might get called. Didn’t research into this one yet.
 firewall.py|	Creates firewall rules, a firewall policy and attaches that to all routers. Lists firewall rules. Updates existing rules from rules descripbed in config file.
-Shelve/unshelve.py|	Sends a server to the shelve; takes it back 
+Shelve/unshelve.py|	Sends a server to the shelve; takes it back
+createSnapshot.py| creates a snapshot. Not yet tested. restoreSnapshot.py destroyed my server in the last test.
 
 
 
